@@ -24,6 +24,17 @@ def draw(colormap, graph):
     nx.draw(graph, node_color=colormap)
 
 
+def chromatic_bounds(graph):
+    graph.chromatic_number_upper = max(graph.degree(), key=lambda x: x[1])[1] + 1
+
+    if len(graph) == 1:
+        graph.chromatic_number_lower = 1
+    elif nx.is_bipartite(graph):
+        graph.chromatic_number_lower = 2
+    else:
+        graph.chromatic_number_lower = 3
+
+
 def init_individual(genotype, graph):
     color_range = random.randint(graph.chromatic_number_lower, graph.chromatic_number_upper)
 
@@ -65,8 +76,7 @@ def main(argv=None):
     random.seed(seed)
     print(f"Seed: {seed}")
 
-    graph.chromatic_number_lower = max(graph.degree(), key=lambda x: x[1])[1]
-    graph.chromatic_number_upper = max(graph.degree(), key=lambda x: x[1])[1] + 1
+    chromatic_bounds(graph)
 
     creator.create("Fitness", base.Fitness, weights=(-1.0,))
     creator.create("Individual", list, fitness=creator.Fitness, graph=None)
