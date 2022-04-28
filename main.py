@@ -4,6 +4,7 @@ import sys
 
 import matplotlib.pyplot as plt
 import networkx as nx
+import numpy as np
 from deap import creator, base, tools, algorithms
 
 
@@ -34,7 +35,6 @@ class GraphColorer:
         color_range = random.randint(graph.chromatic_number_lower, graph.chromatic_number_upper)
 
         coloring = [random.randint(0, color_range - 1) for _ in range(len(graph))]
-        # coloring = random.sample(range(color_range), graph.number_of_nodes())
         return genotype(coloring)
 
     @staticmethod
@@ -45,7 +45,7 @@ class GraphColorer:
     def fitness(genotype, graph):
         colormap = GraphColorer.gen2colormap(genotype, graph)
         color_count = len(set(genotype))
-        conflict_amplification_constant = 5
+        conflict_amplification_constant = 100
 
         conflict_count = 0
         for node in graph.nodes():
@@ -56,11 +56,29 @@ class GraphColorer:
         return conflict_count * conflict_amplification_constant + color_count,
 
     @staticmethod
-    def mutation(graph, genotype):
+    def mutation_point_repaint(graph, genotype):
+        """Change color of randomly chosen node to randomly picked color"""
         mutated_node_ind = random.randint(0, len(graph) - 1)
 
         genotype[mutated_node_ind] = random.randint(0, graph.chromatic_number_upper - 1)
         return genotype,
+
+    @staticmethod
+    def mutation_color_merge(graph, genotype):
+        """Merge two randomly chosen colors into one color"""
+        x = random.choice(genotype)
+        y = random.choice(genotype)
+
+        for i in range(len(genotype)):
+            if genotype[i] == x:
+                genotype[i] = y
+
+        return genotype,
+
+    # TODO partially matched crossover
+    @staticmethod
+    def pmx():
+        pass
 
     def ea_color(self):
         creator.create("Fitness", base.Fitness, weights=(-1.0,))
@@ -70,14 +88,23 @@ class GraphColorer:
         toolbox.register("individual", GraphColorer.init_individual, creator.Individual, graph=self.graph)
 
         toolbox.register("mate", tools.cxTwoPoint)
-        toolbox.register("mutate", GraphColorer.mutation, self.graph)
+        toolbox.register("mutate", GraphColorer.mutation_color_merge, self.graph)
         toolbox.register("select", tools.selTournament, tournsize=3)
         toolbox.register("evaluate", GraphColorer.fitness, graph=self.graph)
         toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
-        a = algorithms.eaSimple(toolbox.population(n=100), toolbox, cxpb=0.5, mutpb=0.2, ngen=50)
-        print("===")
-        self.result = a[0][0]
+        stats = tools.Statistics(key=lambda ind: ind.fitness.values)
+        stats.register("avg", np.mean)
+        stats.register("std", np.std)
+        stats.register("min", np.min)
+        stats.register("max", np.max)
+
+        hof = tools.HallOfFame(1)
+
+        algorithms.eaSimple(toolbox.population(n=100), toolbox, cxpb=0.5, mutpb=0.2, ngen=10000, stats=stats,
+                            verbose=True, halloffame=hof)
+
+        self.result = hof
         self.draw_result()
 
 
