@@ -8,6 +8,18 @@ import numpy as np
 from deap import creator, base, tools, algorithms
 
 
+class IndividualT(list):
+
+    def color_sets(self):
+        colors = set(self)
+        result = {color: set() for color in colors}
+
+        for i in range(len(self)):
+            result[self[i]].add(i)
+
+        return result
+
+
 class GraphColorer:
     """TODO"""
 
@@ -77,21 +89,27 @@ class GraphColorer:
 
     # TODO partially matched crossover
     @staticmethod
-    def pmx():
-        pass
+    def gpx(graph, parent1, parent2):
+        """Greedy partition crossover"""
+        parent1_color_sets = parent1.color_sets()
+        parent2_color_sets = parent2.color_sets()
+        # TODO
+
+        return parent1, parent2
 
     def ea_color(self):
         creator.create("Fitness", base.Fitness, weights=(-1.0,))
-        creator.create("Individual", list, fitness=creator.Fitness, graph=None)
+        creator.create("Individual", IndividualT, fitness=creator.Fitness, graph=None)
 
         toolbox = base.Toolbox()
         toolbox.register("individual", GraphColorer.init_individual, creator.Individual, graph=self.graph)
 
         toolbox.register("mate", tools.cxTwoPoint)
-        toolbox.register("mutate", GraphColorer.mutation_color_merge, self.graph)
+        toolbox.register("mutate", GraphColorer.mutation_point_repaint, self.graph)
         toolbox.register("select", tools.selTournament, tournsize=3)
         toolbox.register("evaluate", GraphColorer.fitness, graph=self.graph)
         toolbox.register("population", tools.initRepeat, list, toolbox.individual)
+        toolbox.register("mate", GraphColorer.gpx, self.graph)
 
         stats = tools.Statistics(key=lambda ind: ind.fitness.values)
         stats.register("avg", np.mean)
@@ -101,7 +119,7 @@ class GraphColorer:
 
         hof = tools.HallOfFame(1)
 
-        algorithms.eaSimple(toolbox.population(n=100), toolbox, cxpb=0.5, mutpb=0.2, ngen=10000, stats=stats,
+        algorithms.eaSimple(toolbox.population(n=100), toolbox, cxpb=0.5, mutpb=0.2, ngen=1000, stats=stats,
                             verbose=True, halloffame=hof)
 
         self.result = hof
