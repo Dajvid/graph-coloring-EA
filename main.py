@@ -27,6 +27,7 @@ class GraphColorer:
         self.graph = graph
         self.chromatic_bounds()
         self.result = None
+        self.toolbox = None
 
     def chromatic_bounds(self):
         self.graph.chromatic_number_upper = max(self.graph.degree(), key=lambda x: x[1])[1] + 1
@@ -50,12 +51,8 @@ class GraphColorer:
         return genotype(coloring)
 
     @staticmethod
-    def gen2colormap(genotype, graph):
-        return dict(zip(graph.nodes, genotype))
-
-    @staticmethod
     def fitness(genotype, graph):
-        colormap = GraphColorer.gen2colormap(genotype, graph)
+        colormap = dict(zip(graph.nodes, genotype))
         color_count = len(set(genotype))
         conflict_amplification_constant = 100
 
@@ -87,29 +84,52 @@ class GraphColorer:
 
         return genotype,
 
-    # TODO partially matched crossover
     @staticmethod
-    def gpx(graph, parent1, parent2):
+    def gpx_helper(parent1, parent2):
+        parents = [parent1, parent2]
+        parent_sets = [parent1.color_sets(), parent2.color_sets()]
+        # p1_max = max(parent1_color_sets.values, key=len)
+        child = [None] * len(parent1)
+
+        # a = [max(parent_set.values(), key=len) for parent_set in parent_sets]
+        # class_index = 0 if len(a[0]) > len(a[1]) else 1
+        class_index = 0
+        while child.count(None) == 0:
+            vertices = max(parent_sets[class_index], key=len)
+            color = parents[vertices[0]]
+
+            # save color class in the child
+            for vertex in vertices:
+                child[vertex] = color
+                # delete used vertices from the other parent set
+                parent_sets[(class_index + 1) % 2][parents[(class_index + 1) % 2][vertex]].remove(vertex)
+
+            # And finally delete the whole used color class from current parent
+            parent_sets[class_index].pop(color)
+
+            class_index = (class_index + 1) % 2
+
+        return creator.Individual(child)
+
+    @staticmethod
+    def gpx(parent1, parent2):
         """Greedy partition crossover"""
-        parent1_color_sets = parent1.color_sets()
-        parent2_color_sets = parent2.color_sets()
-        # TODO
+        return GraphColorer.gpx_helper(parent1, parent2), GraphColorer.gpx_helper(parent2, parent1)
 
-        return parent1, parent2
+    # TODO another smart crossover
 
-    def ea_color(self):
+    def ea_color(self, popsize=100, cxpb=0.25, mutpb=0.2, ngen=1000):
         creator.create("Fitness", base.Fitness, weights=(-1.0,))
         creator.create("Individual", IndividualT, fitness=creator.Fitness, graph=None)
 
-        toolbox = base.Toolbox()
-        toolbox.register("individual", GraphColorer.init_individual, creator.Individual, graph=self.graph)
-
-        toolbox.register("mate", tools.cxTwoPoint)
-        toolbox.register("mutate", GraphColorer.mutation_point_repaint, self.graph)
-        toolbox.register("select", tools.selTournament, tournsize=3)
-        toolbox.register("evaluate", GraphColorer.fitness, graph=self.graph)
-        toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-        toolbox.register("mate", GraphColorer.gpx, self.graph)
+        self.toolbox = base.Toolbox()
+        self.toolbox.register("individual", GraphColorer.init_individual, creator.Individual, graph=self.graph)
+        # self.toolbox.register("mate", tools.cxTwoPoint)
+        self.toolbox.register("mutate", GraphColorer.mutation_point_repaint, self.graph)
+        self.toolbox.register("select", tools.selTournament, tournsize=3)
+        self.toolbox.register("evaluate", GraphColorer.fitness, graph=self.graph)
+        self.toolbox.register("population", tools.initRepeat, list, self.toolbox.individual)
+        self.toolbox.register("mate", GraphColorer.gpx)
 
         stats = tools.Statistics(key=lambda ind: ind.fitness.values)
         stats.register("avg", np.mean)
@@ -119,8 +139,8 @@ class GraphColorer:
 
         hof = tools.HallOfFame(1)
 
-        algorithms.eaSimple(toolbox.population(n=100), toolbox, cxpb=0.5, mutpb=0.2, ngen=1000, stats=stats,
-                            verbose=True, halloffame=hof)
+        algorithms.eaSimple(self.toolbox.population(n=popsize), self.toolbox, cxpb=cxpb, mutpb=mutpb, ngen=ngen,
+                            stats=stats, verbose=True, halloffame=hof)
 
         self.result = hof
         self.draw_result()
