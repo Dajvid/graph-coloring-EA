@@ -108,19 +108,20 @@ def gpx(parent1, parent2):
     # TODO another smart crossover
 
 
-def ea_color(graph, popsize=100, cxpb=0.25, mutpb=0.2, ngen=1000):
+def ea_color(graph, initializer=init_individual, crossover=gpx, mutation=mutation_point_repaint,
+             popsize=100, cxpb=0.25, mutpb=0.2, ngen=1000, visualize=False, verbose=True):
     chromatic_bounds(graph)
     creator.create("Fitness", base.Fitness, weights=(-1.0,))
     creator.create("Individual", IndividualT, fitness=creator.Fitness, graph=None)
 
     toolbox = base.Toolbox()
-    toolbox.register("individual", init_individual, creator.Individual, graph=graph)
+    toolbox.register("individual", initializer, creator.Individual, graph=graph)
+    toolbox.register("mate", crossover)
     # toolbox.register("mate", tools.cxTwoPoint)
-    toolbox.register("mutate", mutation_point_repaint, graph)
+    toolbox.register("mutate", mutation, graph)
     toolbox.register("select", tools.selTournament, tournsize=3)
     toolbox.register("evaluate", fitness, graph=graph)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-    toolbox.register("mate", gpx)
 
     stats = tools.Statistics(key=lambda ind: ind.fitness.values)
     stats.register("avg", np.mean)
@@ -131,5 +132,8 @@ def ea_color(graph, popsize=100, cxpb=0.25, mutpb=0.2, ngen=1000):
     hof = tools.HallOfFame(1)
 
     algorithms.eaSimple(toolbox.population(n=popsize), toolbox, cxpb=cxpb, mutpb=mutpb, ngen=ngen,
-                        stats=stats, verbose=True, halloffame=hof)
-    draw_result(graph, hof)
+                        stats=stats, verbose=verbose, halloffame=hof)
+    if visualize:
+        draw_result(graph, hof)
+
+    return hof

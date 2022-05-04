@@ -27,7 +27,7 @@ def main(argv=None):
     random.seed(seed)
     print(f"Seed: {seed}")
 
-    ea_color(graph)
+    ea_color(graph, visualize=True)
 
 
 if __name__ == '__main__':
