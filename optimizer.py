@@ -40,6 +40,16 @@ def init_individual(genotype, graph):
     return genotype(coloring)
 
 
+def init_individual_heuristic(genotype, graph):
+    colormap = nx.greedy_color(graph, 'largest_first')
+    result = genotype()
+
+    for node in graph.nodes:
+        result.append(colormap[node])
+
+    return result
+
+
 def fitness(genotype, graph):
     colormap = dict(zip(graph.nodes, genotype))
     color_count = len(set(genotype))
@@ -70,6 +80,24 @@ def mutation_color_merge(graph, genotype):
     for i in range(len(genotype)):
         if genotype[i] == x:
             genotype[i] = y
+
+    return genotype,
+
+
+def mutation_change_conflicting(graph, genotype):
+    colormap = dict(zip(graph.nodes, genotype))
+    color_range = random.randint(graph.chromatic_number_lower, graph.chromatic_number_upper)
+
+    conflicting = set()
+    for node in graph.nodes():
+        for neighbour in graph.neighbors(node):
+            if colormap[node] == colormap[neighbour]:
+                conflicting.add(node)
+                conflicting.add(neighbour)
+
+    for i, node in enumerate(graph.nodes):
+        if node in conflicting:
+            genotype[i] = random.randint(0, color_range - 1)
 
     return genotype,
 
@@ -105,21 +133,19 @@ def gpx(parent1, parent2):
     """Greedy partition crossover"""
     return gpx_helper(parent1, parent2), gpx_helper(parent2, parent1)
 
-    # TODO another smart crossover
 
-
-def ea_color(graph, initializer=init_individual, crossover=gpx, mutation=mutation_point_repaint,
+def ea_color(graph, selection=(tools.selTournament, {"tournsize": 3}), crossover=gpx, mutation=mutation_point_repaint,
              popsize=100, cxpb=0.25, mutpb=0.2, ngen=1000, visualize=False, verbose=True):
     chromatic_bounds(graph)
     creator.create("Fitness", base.Fitness, weights=(-1.0,))
     creator.create("Individual", IndividualT, fitness=creator.Fitness, graph=None)
 
     toolbox = base.Toolbox()
-    toolbox.register("individual", initializer, creator.Individual, graph=graph)
+
+    toolbox.register("individual", init_individual, creator.Individual, graph=graph)
     toolbox.register("mate", crossover)
-    # toolbox.register("mate", tools.cxTwoPoint)
     toolbox.register("mutate", mutation, graph)
-    toolbox.register("select", tools.selTournament, tournsize=3)
+    toolbox.register("select", selection[0], **(selection[1]))
     toolbox.register("evaluate", fitness, graph=graph)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 

@@ -3,7 +3,7 @@ import random
 import sys
 import networkx as nx
 
-from optimizer import ea_color
+from optimizer import ea_color, mutation_change_conflicting
 
 
 def parse_args(argv):
@@ -11,7 +11,7 @@ def parse_args(argv):
 
     parser.add_argument(
         "-i", "--input",
-        default="graphs/example0.graphml",
+        default="graphs/DSJC125.1.graphml",
         help="Path to input graph "
     )
 
@@ -27,7 +27,7 @@ def main(argv=None):
     random.seed(seed)
     print(f"Seed: {seed}")
 
-    ea_color(graph, visualize=True)
+    ea_color(graph, mutation=mutation_change_conflicting, visualize=True)
 
 
 if __name__ == '__main__':
