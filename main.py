@@ -3,7 +3,7 @@ import random
 import sys
 import networkx as nx
 
-from optimizer import ea_color, mutation_change_conflicting
+from optimizer import ea_color, mutation_change_conflicting, mutation_point_repaint
 
 
 def parse_args(argv):

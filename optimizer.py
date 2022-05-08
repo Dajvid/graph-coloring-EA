@@ -89,6 +89,12 @@ def mutation_change_conflicting(graph, genotype):
     color_range = random.randint(graph.chromatic_number_lower, graph.chromatic_number_upper)
 
     conflicting = set()
+    if len(conflicting) == 0:
+        if random.random() < 0.3:
+            return mutation_color_merge(graph, genotype)
+        else:
+            return mutation_point_repaint(graph, genotype)
+
     for node in graph.nodes():
         for neighbour in graph.neighbors(node):
             if colormap[node] == colormap[neighbour]:
@@ -134,7 +140,7 @@ def gpx(parent1, parent2):
     return gpx_helper(parent1, parent2), gpx_helper(parent2, parent1)
 
 
-def ea_color(graph, selection=(tools.selTournament, {"tournsize": 3}), crossover=gpx, mutation=mutation_point_repaint,
+def ea_color(graph, selection=(tools.selTournament, {"tournsize": 5}), crossover=gpx, mutation=mutation_point_repaint,
              popsize=100, cxpb=0.25, mutpb=0.2, ngen=1000, visualize=False, verbose=True):
     chromatic_bounds(graph)
     creator.create("Fitness", base.Fitness, weights=(-1.0,))
@@ -157,8 +163,8 @@ def ea_color(graph, selection=(tools.selTournament, {"tournsize": 3}), crossover
 
     hof = tools.HallOfFame(1)
 
-    algorithms.eaSimple(toolbox.population(n=popsize), toolbox, cxpb=cxpb, mutpb=mutpb, ngen=ngen,
-                        stats=stats, verbose=verbose, halloffame=hof)
+    algorithms.eaSimple(toolbox.population(n=popsize), toolbox, cxpb=cxpb, mutpb=mutpb, ngen=ngen, stats=stats,
+                        verbose=verbose, halloffame=hof)
     if visualize:
         draw_result(graph, hof)
 

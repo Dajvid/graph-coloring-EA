@@ -1,0 +1,1 @@
+mutpb: [0.1, 0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]kwargs: {'crossover': <function gpx at 0x7f0e43aae440>, 'mutation': <function mutation_point_repaint at 0x7f0e43aae200>, 'popsize': 50, 'cxpb': 0.25, 'mutpb': 1, 'ngen': 200, 'visualize': False, 'verbose': False, 'graph': <networkx.classes.graph.Graph object at 0x7f0e50b0fb20>}
